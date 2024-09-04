@@ -1,0 +1,7 @@
+*.js
+*.js.map
+
+dist/
+build/
+
+node_modules/
