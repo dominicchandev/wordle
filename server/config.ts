@@ -8,6 +8,7 @@ interface Config {
     words: string[]
     lengthOfWords: number
     maxRounds: number
+    server_port: number
 }
 
 const lengthOfWords = Number(process.env.LENGTH_OF_WORDS) || 0;
@@ -30,6 +31,7 @@ const config: Config = {
     words: words,
     maxRounds: Number(process.env.MAX_ROUND || 5),
     lengthOfWords: lengthOfWords,
+    server_port: Number(process.env.SERVER_PORT || 3000)
 }
 
 export default config;
