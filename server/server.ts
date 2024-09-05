@@ -11,6 +11,7 @@ const wss = new Server({ server });
 // Read from Configuration
 const maxRounds: number = config.maxRounds; 
 const wordList: string[] = config.words;
+const lengthOfWords: number = config.lengthOfWords;
 const answer: string = wordList[Math.floor(Math.random() * wordList.length)];
 
 interface Player {
@@ -45,8 +46,8 @@ function handleGuess(ws: WebSocket, playerId: string, guess: string): void {
   const player = players[playerId];
   guess = guess.toLowerCase();
 
-  if (guess.length !== 5) {
-    ws.send(JSON.stringify({ type: 'error', message: 'Please enter a 5-letter word.' }));
+  if (guess.length !== lengthOfWords) {
+    ws.send(JSON.stringify({ type: 'error', message: `Please enter a ${lengthOfWords}-letter word.` }));
     return;
   }
 
