@@ -2,11 +2,13 @@ import config from './config';
 import express from 'express';
 import http from 'http';
 import WebSocket, { Server } from 'ws';
-import logWithTimestamp from './logger';
+import Logger from './logger';
 
 const app = express();
 const server = http.createServer(app);
 const wss = new Server({ server });
+
+const logger = new Logger("wordle-server")
 
 // Read from Configuration
 const maxRounds: number = config.maxRounds; 
@@ -40,7 +42,7 @@ wss.on('connection', (ws: WebSocket) => {
 })
 
 function handleGuess(ws: WebSocket, playerId: string, guess: string): void {
-  logWithTimestamp(`Received guess '${guess}' from player ${playerId}`);
+  logger.info(`Received guess '${guess}' from player ${playerId}`);
   if (!players[playerId] || players[playerId].won) return;
 
   const player = players[playerId];
@@ -53,7 +55,7 @@ function handleGuess(ws: WebSocket, playerId: string, guess: string): void {
 
   player.currentRound++;
   const feedback = getFeedback(guess);
-  logWithTimestamp(`Sending feedback ${feedback} to player ${playerId}`);
+  logger.info(`Sending feedback ${feedback} to player ${playerId}`);
   ws.send(JSON.stringify({ type: 'feedback', feedback }));
 
   if (feedback === 'OOOOO') {
@@ -80,5 +82,5 @@ function getFeedback(guess: string): string {
 }
 
 server.listen(config.server_port, () => {
-  logWithTimestamp(`Wordle server is running on port ${config.server_port}`)
+  logger.info(`Wordle server is running on port ${config.server_port}`)
 })
