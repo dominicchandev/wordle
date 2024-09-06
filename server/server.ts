@@ -2,84 +2,49 @@ import config from './config';
 import express from 'express';
 import http from 'http';
 import WebSocket, { Server } from 'ws';
-import Logger from './logger';
+import Logger from './Logger';
+import MessageType from '../common/MessageType';
+import WordleGame from './WordleGame';
 
 const app = express();
 const server = http.createServer(app);
 const wss = new Server({ server });
 
-const logger = new Logger("wordle-server")
+const logger = new Logger("wordle-server");
 
-// Read from Configuration
-const maxRounds: number = config.maxRounds; 
-const wordList: string[] = config.words;
-const lengthOfWords: number = config.lengthOfWords;
-const answer: string = wordList[Math.floor(Math.random() * wordList.length)];
+const wordleGame = new WordleGame();
+const wsClients = new Map<string, WebSocket>();
 
-interface Player {
-  currentRound: number;
-  won: boolean;
-}
+wss.on('connection', async (ws: WebSocket) => {
+  const playerId = await wordleGame.onNewConnection(ws);
+  wsClients.set(playerId, ws)
 
-let players: Record<string, Player> = {};
-
-wss.on('connection', (ws: WebSocket) => {
-  const playerId = Math.random().toString(36).substr(2, 9);
-  players[playerId] = { currentRound: 0, won: false };
-
-  ws.send(JSON.stringify({ type: 'welcome', playerId }));
-
-  ws.on('message', (message: string) => {
+  ws.on('message', async (message: string) => {
     const data = JSON.parse(message);
-    if (data.type === 'guess') {
-      handleGuess(ws, playerId, data.guess);
+
+    switch (data.type) {
+      case MessageType.CreateRoom:
+        await wordleGame.handleCreateRoom(ws, playerId, data.word, data.numOfPlayers);
+        break;
+      case MessageType.JoinRoom:
+        await wordleGame.handleJoinRoom(ws, data.roomId, playerId, data.word, wsClients);
+        break;
+      case MessageType.PlaySingle:
+        await wordleGame.handlePlaySingle(ws, playerId);
+        break;
+      case MessageType.Guess:
+        await wordleGame.handleGuess(ws, playerId, data.guess);
+        break;
+      default:
+        logger.error("Unknown message type");
     }
   });
   
-  ws.on('close', () => {
-    delete players[playerId];
+  ws.on('close', async () => {
+    wsClients.delete(playerId);
+    await wordleGame.onCloseConnection(playerId);
   });
 })
-
-function handleGuess(ws: WebSocket, playerId: string, guess: string): void {
-  logger.info(`Received guess '${guess}' from player ${playerId}`);
-  if (!players[playerId] || players[playerId].won) return;
-
-  const player = players[playerId];
-  guess = guess.toLowerCase();
-
-  if (guess.length !== lengthOfWords) {
-    ws.send(JSON.stringify({ type: 'error', message: `Please enter a ${lengthOfWords}-letter word.` }));
-    return;
-  }
-
-  player.currentRound++;
-  const feedback = getFeedback(guess);
-  logger.info(`Sending feedback ${feedback} to player ${playerId}`);
-  ws.send(JSON.stringify({ type: 'feedback', feedback }));
-
-  if (feedback === 'OOOOO') {
-    player.won = true;
-    ws.send(JSON.stringify({ type: 'result', message: 'Congratulations! You\'ve guessed the word!' }));
-  } else if (player.currentRound >= maxRounds) {
-    ws.send(JSON.stringify({ type: 'result', message: `Game over! The correct word was: ${answer}` }));
-  }
-}
-
-
-function getFeedback(guess: string): string {
-  let feedback: string = '';
-  for (let i = 0; i < guess.length; i++) {
-    if (guess[i] === answer[i]) {
-      feedback += 'O'; // Hit
-    } else if (answer.includes(guess[i])) {
-      feedback += '?'; // Present
-    } else {
-      feedback += '_'; // Miss
-    }
-  }
-  return feedback;
-}
 
 server.listen(config.server_port, () => {
   logger.info(`Wordle server is running on port ${config.server_port}`)

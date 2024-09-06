@@ -18,9 +18,11 @@
     "typescript": "^5.5.4"
   },
   "dependencies": {
+    "@types/redis": "^4.0.10",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
     "morgan": "^1.10.0",
+    "redis": "^4.7.0",
     "ws": "^8.18.0"
   }
 }
