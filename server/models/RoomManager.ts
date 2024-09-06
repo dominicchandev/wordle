@@ -63,7 +63,7 @@ class RoomManager {
         if (room.wordsByPlayerId === undefined) {
             room.wordsByPlayerId = {};
         }
-        await this.playerManager.update_providedWord(playerId, word);
+        await this.playerManager.updateProvidedWord(playerId, word);
         this.logger.info(`Before setting wordsByPlayerId: ${JSON.stringify(room.wordsByPlayerId)}`)
         room.wordsByPlayerId[playerId] = word;
         this.logger.info(`After setting wordsByPlayerId: ${JSON.stringify(room.wordsByPlayerId)}`)
@@ -78,13 +78,9 @@ class RoomManager {
 
             for (let i=0; i < playerIds.length; i++) {
                 let nextIndex = (i + 1) % playerIds.length;
-                this.logger.info(`index: ${i}`)
-                this.logger.info(`nextIndex: ${nextIndex}`);
-                
-
                 let currentPlayerId = playerIds[i];
                 let nextWord = words[nextIndex];
-                await this.playerManager.update_targetWord(currentPlayerId, nextWord);
+                await this.playerManager.updateTargetWord(currentPlayerId, nextWord);
             }
         }
         this.logger.info(`updated room to ${JSON.stringify(room)}`);

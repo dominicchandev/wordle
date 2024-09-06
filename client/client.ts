@@ -54,10 +54,16 @@ ws.on('open', () => {
 ws.on('message', (message: string) => {
   const data = JSON.parse(message);
 
-  console.log(`Received data ${JSON.stringify(data)}`);
   switch (data.type) {
     case MessageType.Welcome:
       wordleClient.handleWelcome(data.playerId);
+      break;
+    case MessageType.RoomCreated:
+      console.log(`Room ${data.roomId} is created.`);
+    case MessageType.playerJoinedRoom:
+      const roomId = data.roomId;
+      const playerId = data.playerId;
+      console.log(`Player ${playerId} entered room ${roomId}.`);
       break;
     case MessageType.Start:
       console.log(`Start to play!`);

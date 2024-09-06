@@ -41,13 +41,21 @@ class WordleGame{
         this.logger.info(`Create Room from player ${playerId}`);
         const roomId = await this.roomManager.create(numOfPlayers);
         await this.addPlayerToRoom(ws, roomId, playerId, word);
+        ws.send(JSON.stringify({ type: MessageType.RoomCreated, message: `Room ${roomId} is created.`, roomId: roomId}));
     }
     
     public async handleJoinRoom(ws: WebSocket, roomId: string, playerId: string, word: string, wsClients: Map<string, WebSocket>) {
         this.logger.info(`Player ${playerId} has joined Room ${roomId}`);
         const roomIsReady = await this.addPlayerToRoom(ws, roomId, playerId, word);
+        const playerIdsInRoom = await this.roomManager.getPlayerIdsInRoom(roomId);
+        for (const playerIdInRoom of playerIdsInRoom) {
+            let wsClient = wsClients.get(playerIdInRoom);
+            if (wsClient != undefined) {
+                wsClient.send(JSON.stringify({ type: MessageType.playerJoinedRoom, message: `Player ${playerId} joined room ${roomId}.`, playerId: playerId, roomId: roomId }));
+            }
+        }
+
         if (roomIsReady) {
-            const playerIdsInRoom = await this.roomManager.getPlayerIdsInRoom(roomId);
             for (const playerId of playerIdsInRoom) {
                 let wsClient = wsClients.get(playerId);
                 if (wsClient != undefined) {
@@ -59,7 +67,7 @@ class WordleGame{
     
     public async handlePlaySingle(ws: WebSocket, playerId: string) {
         this.logger.info(`Player ${playerId} play solo`);
-        await this.playerManager.update_targetWord(playerId, this.defaultAnswer);
+        await this.playerManager.updateTargetWord(playerId, this.defaultAnswer);
         ws.send(JSON.stringify({ type: MessageType.Start, message: `Please enter a ${this.lengthOfWords}-letter word.` }));
     }
 
@@ -75,7 +83,9 @@ class WordleGame{
             return;
         }
       
-        player.currentRound++;
+        const numOfRound = player.currentRound + 1;
+        this.playerManager.updateCurrentRound(playerId, numOfRound);
+
         const feedback = this.getFeedback(guess, player.targetWord!);
         this.logger.info(`Sending feedback ${feedback} to player ${playerId}`);
         ws.send(JSON.stringify({ type: MessageType.Feedback, feedback }));
@@ -107,10 +117,8 @@ class WordleGame{
         const room = await this.roomManager.addPlayer(roomId, playerId, word);
         if (!room) {
             ws.send(JSON.stringify({ type: MessageType.Error, message: `Failed to create room ${room}`}));
-        } else if (!room.roomIsReady) {
-            ws.send(JSON.stringify({ type: MessageType.WaitForMorePlayers, message: `Room: ${roomId} wait for other players...`}));
-        } else {
-            return true;
+        } else if (room && room.roomIsReady) {
+            return true
         }
         return false;
     }

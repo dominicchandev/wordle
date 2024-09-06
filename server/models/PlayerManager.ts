@@ -42,7 +42,7 @@ class PlayerManager {
         }   
     }
 
-    public async update_targetWord(playerId: string, targetWord: string) {
+    public async updateTargetWord(playerId: string, targetWord: string) {
         const player_in_redis = await this.read(playerId);
         if (player_in_redis) {
             const redisClient = await RedisManager.getClient();
@@ -52,13 +52,23 @@ class PlayerManager {
         }
     }
 
-    public async update_providedWord(playerId: string, providedWord: string) {
+    public async updateProvidedWord(playerId: string, providedWord: string) {
         const player_in_redis = await this.read(playerId);
         if (player_in_redis) {
             const redisClient = await RedisManager.getClient();
             player_in_redis.providedWord = providedWord;
             await redisClient.set(`player:${playerId}`, JSON.stringify(player_in_redis));
             this.logger.info(`Update player ${playerId} to ${JSON.stringify(player_in_redis)}`);
+        }
+    }
+
+    public async updateCurrentRound(playerId: string, numOfRound: number) {
+        const player = await this.read(playerId);
+        if (player) {
+            const redisClient = await RedisManager.getClient();
+            player.currentRound = numOfRound;
+            await redisClient.set(`player:${playerId}`, JSON.stringify(player));
+            this.logger.info(`Update player ${playerId} to ${JSON.stringify(player)}`);
         }
     }
 }

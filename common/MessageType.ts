@@ -1,8 +1,9 @@
 enum MessageType {
     Welcome = 'welcome',
     CreateRoom = 'createRoom',
+    RoomCreated = 'roomCreated',
     JoinRoom = 'joinRoom',
-    WaitForMorePlayers = 'waitForMorePlayers',
+    playerJoinedRoom = 'playerJoinedRoom',
     PlaySingle = 'playSingle',
     Start = "start",
     Guess = 'guess',
