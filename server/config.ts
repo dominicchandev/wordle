@@ -9,6 +9,7 @@ interface Config {
     lengthOfWords: number
     maxRounds: number
     server_port: number
+    maxPlayersInRoom: number
 }
 
 const lengthOfWords = Number(process.env.LENGTH_OF_WORDS) || 0;
@@ -31,7 +32,8 @@ const config: Config = {
     words: words,
     maxRounds: Number(process.env.MAX_ROUND || 5),
     lengthOfWords: lengthOfWords,
-    server_port: Number(process.env.SERVER_PORT || 3000)
+    server_port: Number(process.env.SERVER_PORT || 3000),
+    maxPlayersInRoom: Number(process.env.MAX_PLAYERS_IN_ROOM),
 }
 
 export default config;

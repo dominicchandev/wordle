@@ -4,6 +4,7 @@ import RoomManager from './models/RoomManager';
 import Logger from './Logger';
 import MessageType from "../common/MessageType";
 import WebSocket from 'ws';
+import { validateNumberOfPlayersInRoom, validateWord } from "./validate";
 
 
 class WordleGame{
@@ -38,6 +39,15 @@ class WordleGame{
     }
 
     public async handleCreateRoom(ws: WebSocket, playerId: string, word: string, numOfPlayers: number) {
+        if (!validateNumberOfPlayersInRoom(numOfPlayers)) {
+            ws.send(JSON.stringify({ type: MessageType.Error, message: `Not a valid numOfPlayers ${numOfPlayers}. Range: [2, ${config.maxPlayersInRoom}]`}));
+            return
+        }
+
+        if (!validateWord(word)) {
+            ws.send(JSON.stringify({ type: MessageType.Error, message: `Not a valid word ${word}`}));
+            return
+        }
         this.logger.info(`Create Room from player ${playerId}`);
         const roomId = await this.roomManager.create(numOfPlayers);
         await this.addPlayerToRoom(ws, roomId, playerId, word);
@@ -45,6 +55,10 @@ class WordleGame{
     }
     
     public async handleJoinRoom(ws: WebSocket, roomId: string, playerId: string, word: string, wsClients: Map<string, WebSocket>) {
+        if (!validateWord(word)) {
+            ws.send(JSON.stringify({ type: MessageType.Error, message: `Not a valid word ${word}`}));
+            return
+        }
         this.logger.info(`Player ${playerId} has joined Room ${roomId}`);
         const roomIsReady = await this.addPlayerToRoom(ws, roomId, playerId, word);
         const playerIdsInRoom = await this.roomManager.getPlayerIdsInRoom(roomId);
@@ -73,16 +87,16 @@ class WordleGame{
 
     public async handleGuess(ws: WebSocket, playerId: string, guess: string, wsClients: Map<string, WebSocket>): Promise<void> {
         this.logger.info(`Received guess '${guess}' from player ${playerId}`);
+        if (!validateWord(guess)) {
+            ws.send(JSON.stringify({ type: MessageType.Error, message: `Not a valid word ${guess}`}));
+            return
+        }
+        
         const player = await this.playerManager.read(playerId)
         if (!player || player.won) return;
       
         guess = guess.toLowerCase();
-      
-        if (guess.length !== this.lengthOfWords) {
-            ws.send(JSON.stringify({ type: MessageType.Error, message: `Please enter a ${this.lengthOfWords}-letter word.` }));
-            return;
-        }
-      
+           
         const numOfRound = player.currentRound + 1;
         await this.playerManager.updateCurrentRound(playerId, numOfRound);
 

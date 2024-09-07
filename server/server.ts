@@ -36,7 +36,7 @@ wss.on('connection', async (ws: WebSocket) => {
         await wordleGame.handleGuess(ws, playerId, data.guess, wsClients);
         break;
       default:
-        logger.error("Unknown message type");
+        logger.error(`Unknown message type: ${JSON.stringify(data)}`);
     }
   });
   
