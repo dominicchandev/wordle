@@ -128,7 +128,7 @@ class WordleGame{
     private async addPlayerToRoom(ws: WebSocket, roomId: string, playerId: string, word: string): Promise<boolean> {
         const room = await this.roomManager.addPlayer(roomId, playerId, word);
         if (!room) {
-            ws.send(JSON.stringify({ type: MessageType.Error, message: `Failed to create room ${room}`}));
+            ws.send(JSON.stringify({ type: MessageType.Error, message: `Failed to find room ${roomId}`}));
         } else if (room && room.roomIsReady) {
             return true
         }

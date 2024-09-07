@@ -13,9 +13,11 @@ const rl = readline.createInterface({
 
 class WordleClient{
   public joinedRoom: boolean;
+  public askLastQuestion: () => void;
 
   constructor() {
     this.joinedRoom = false;
+    this.askLastQuestion = () => {};
   };
 
   private validateWordInput(input: string): boolean {
@@ -50,22 +52,28 @@ class WordleClient{
     .then((playMode) => {
       switch (playMode) {
         case MessageType.CreateRoom:
-          this.askQuestion("Number of Players: ", this.validateNumberOfPlayers)
-          .then((numOfPlayers) => {
-            this.askQuestion("Provide a word: ", this.validateWordInput)
-            .then((word) => {
-              ws.send(JSON.stringify({ type: MessageType.CreateRoom, numOfPlayers: numOfPlayers, word: word}));
+          this.askLastQuestion = () => {
+            this.askQuestion("Number of Players: ", this.validateNumberOfPlayers)
+            .then((numOfPlayers) => {
+              this.askQuestion("Provide a word: ", this.validateWordInput)
+              .then((word) => {
+                ws.send(JSON.stringify({ type: MessageType.CreateRoom, numOfPlayers: numOfPlayers, word: word}));
+              })
             })
-          })
+          }
+          this.askLastQuestion();
           break;
         case MessageType.JoinRoom:
-          this.askQuestion("Enter RoomId: ", (input) => !isNaN(Number(input)))
-          .then((roomId) => {
-            this.askQuestion("Provide a word: ", this.validateWordInput)
-            .then((word) => {
-              ws.send(JSON.stringify({ type: MessageType.JoinRoom, roomId: roomId, word: word}));
+          this.askLastQuestion = () => {
+            this.askQuestion("Enter RoomId: ", (input) => !isNaN(Number(input)))
+            .then((roomId) => {
+              this.askQuestion("Provide a word: ", this.validateWordInput)
+              .then((word) => {
+                ws.send(JSON.stringify({ type: MessageType.JoinRoom, roomId: roomId, word: word}));
+              })
             })
-          })
+          }
+          this.askLastQuestion();
           break;
         case MessageType.PlaySingle:
           ws.send(JSON.stringify({ type: MessageType.PlaySingle, playerId: playerId}));
@@ -129,6 +137,7 @@ ws.on('message', (message: string) => {
       }
     case MessageType.Error:
       console.log(`Error: ${data.message}`);
+      wordleClient.askLastQuestion();
       break;
   }
 });
