@@ -2,13 +2,20 @@ import RedisManager from "../database/RedisManager";
 import Logger from "../Logger";
 import PlayerManager from "./PlayerManager";
 
-interface Room {
+
+interface PlayerInRoomResult {
+    hitTargetWord: boolean;
+    numOfRounds: number;
+}
+
+export interface Room {
     roomIsReady: boolean;
     numOfPlayers: number;
     wordsByPlayerId?: {[key: string]: string};
+    playerInRoomResultByPlayerId?: {[key: string]: PlayerInRoomResult};
 }
 
-class RoomManager {
+export class RoomManager {
     private largestIdKey: string;
     private logger: Logger;
     private playerManager: PlayerManager
@@ -88,6 +95,22 @@ class RoomManager {
         await redisClient.set(`room:${roomId}`, JSON.stringify(room));
         return room
     }
-}
 
-export default RoomManager;
+    public async updatePlayerResult(roomId: string, playerId: string, hitTargetWord: boolean, numOfRounds: number): Promise<Room | null> {
+        const room = await this.read(roomId);
+        const player = await this.playerManager.read(playerId);
+        if (!room || !player) {
+            return null
+        }
+
+        const playerInRoomResult: PlayerInRoomResult =  { hitTargetWord: hitTargetWord, numOfRounds: numOfRounds };
+        if (room.playerInRoomResultByPlayerId === undefined) {
+            room.playerInRoomResultByPlayerId = {};
+        }
+        room.playerInRoomResultByPlayerId[playerId] = playerInRoomResult;
+
+        const redisClient = await RedisManager.getClient();
+        await redisClient.set(`room:${roomId}`, JSON.stringify(room));
+        return room
+    }
+}

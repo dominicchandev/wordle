@@ -1,10 +1,11 @@
 import config from "./config";
 import PlayerManager from './models/PlayerManager';
-import RoomManager from './models/RoomManager';
+import { Room, RoomManager } from './models/RoomManager';
 import Logger from './Logger';
 import MessageType from "../common/MessageType";
 import WebSocket from 'ws';
 import { validateNumberOfPlayersInRoom, validateWord } from "./validate";
+import RoomResult from "../common/RoomResult";
 
 
 class WordleGame{
@@ -93,12 +94,12 @@ class WordleGame{
         }
         
         const player = await this.playerManager.read(playerId)
-        if (!player || player.won) return;
+        if (!player || player.hitTargetWord) return;
       
         guess = guess.toLowerCase();
            
-        const numOfRound = player.currentRound + 1;
-        await this.playerManager.updateCurrentRound(playerId, numOfRound);
+        const currentRound = player.currentRound + 1;
+        await this.playerManager.updateCurrentRound(playerId, currentRound);
 
         const feedback = this.getFeedback(guess, player.targetWord!);
         this.logger.info(`Sending feedback ${feedback} to player ${playerId}`);
@@ -112,15 +113,36 @@ class WordleGame{
                 }
                 let wsClient = wsClients.get(playerIdInRoom);
                 if (wsClient!= undefined) {
-                    wsClient.send(JSON.stringify({ type: MessageType.ReportProgess, playerId: playerId, currentRound: numOfRound }));
+                    wsClient.send(JSON.stringify({ type: MessageType.ReportProgess, playerId: playerId, currentRound: currentRound }));
                 }
             }
         }
+
+        let hitTargetWord: boolean = false;
+        let finishedGuessing: boolean = false;
         if (feedback === 'OOOOO') {
-            player.won = true;
+            await this.playerManager.updateHitTargetWord(playerId, true);
+            hitTargetWord = true;
+            finishedGuessing = true
             ws.send(JSON.stringify({ type: MessageType.Result, message: 'Congratulations! You\'ve guessed the word!' }));
         } else if (player.currentRound >= this.maxRounds) {
             ws.send(JSON.stringify({ type: MessageType.Result, message: `Game over! The correct word was: ${player.targetWord}` }));
+            finishedGuessing = true
+        }
+
+        if (finishedGuessing && player.roomId) {
+            const room = await this.roomManager.updatePlayerResult(player.roomId, playerId, hitTargetWord, currentRound);
+            if (room && room.playerInRoomResultByPlayerId && Object.keys(room.playerInRoomResultByPlayerId).length == room.numOfPlayers) {
+                const roomResults = this.determineRoomResults(room!);
+                const playerIdsInRoom = await this.roomManager.getPlayerIdsInRoom(player.roomId);
+                for (const playerIdInRoom of playerIdsInRoom) {
+                    let wsClient = wsClients.get(playerIdInRoom);
+                    if (wsClient!= undefined) {
+                        const result = roomResults[playerIdInRoom];
+                        wsClient.send(JSON.stringify({ type: MessageType.RoomResult, message: `Result of player ${playerId}: ${result}` }));
+                    }
+                }
+            }
         }
       }
       
@@ -147,6 +169,42 @@ class WordleGame{
             return true
         }
         return false;
+    }
+
+    private determineRoomResults(room: Room): { [key: string]: RoomResult } {
+        const results: { [key: string]: RoomResult } = {};
+        const playerResults = room.playerInRoomResultByPlayerId;
+
+        if (!playerResults) {
+            return results;
+        }
+
+        let minRounds = Infinity;
+        let winners: string[] = [];
+
+        for (const playerId in playerResults) {
+            const result = playerResults[playerId];
+            if (result.hitTargetWord) {
+                if (result.numOfRounds < minRounds) {
+                    minRounds = result.numOfRounds;
+                    winners = [playerId];
+                } else if (result.numOfRounds === minRounds) {
+                    winners.push(playerId);
+                }
+            }
+        }
+
+        for (const playerId in playerResults) {
+            if (winners.includes(playerId) && winners.length === 1) {
+                results[playerId] = RoomResult.WIN;
+            } else if (winners.includes(playerId)) {
+                results[playerId] = RoomResult.TIE;
+            } else {
+                results[playerId] = RoomResult.LOSE;
+            }
+        }
+
+        return results;
     }
 
 }

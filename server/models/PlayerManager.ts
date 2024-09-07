@@ -1,12 +1,13 @@
 import RedisManager from "../database/RedisManager";
 import Logger from "../Logger";
-
+import RoomResult from "../../common/RoomResult";
 interface Player {
     currentRound: number;
-    won: boolean;
+    hitTargetWord: boolean;
     targetWord?: string;
     roomId?: string;
     providedWord?: string;
+    roomResult?: RoomResult;
 }
 
 class PlayerManager {
@@ -27,7 +28,7 @@ class PlayerManager {
     public async create(): Promise<string> {
         const redisClient = await RedisManager.getClient();
         const playerId = await redisClient.incr(this.largestIdKey);
-        let player: Player = { currentRound: 0, won: false };
+        let player: Player = { currentRound: 0, hitTargetWord: false };
         await redisClient.set(`player:${playerId}`, JSON.stringify(player));
         this.logger.info(`Created player: ${playerId}`);
         return playerId.toString();
@@ -72,11 +73,31 @@ class PlayerManager {
         }
     }
 
-    public async updateCurrentRound(playerId: string, numOfRound: number) {
+    public async updateCurrentRound(playerId: string, currentRound: number) {
         const player = await this.read(playerId);
         if (player) {
             const redisClient = await RedisManager.getClient();
-            player.currentRound = numOfRound;
+            player.currentRound = currentRound;
+            await redisClient.set(`player:${playerId}`, JSON.stringify(player));
+            this.logger.info(`Update player ${playerId} to ${JSON.stringify(player)}`);
+        }
+    }
+
+    public async updateRoomResult(playerId: string, roomResult: RoomResult) {
+        const player = await this.read(playerId);
+        if (player) {
+            const redisClient = await RedisManager.getClient();
+            player.roomResult = roomResult;
+            await redisClient.set(`player:${playerId}`, JSON.stringify(player));
+            this.logger.info(`Update player ${playerId} to ${JSON.stringify(player)}`);
+        }
+    }
+
+    public async updateHitTargetWord(playerId: string, hitTargetWord: boolean) {
+        const player = await this.read(playerId);
+        if (player) {
+            const redisClient = await RedisManager.getClient();
+            player.hitTargetWord = hitTargetWord;
             await redisClient.set(`player:${playerId}`, JSON.stringify(player));
             this.logger.info(`Update player ${playerId} to ${JSON.stringify(player)}`);
         }

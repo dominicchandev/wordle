@@ -135,6 +135,7 @@ ws.on('message', (message: string) => {
       if (wordleClient.joinedRoom) {
         ws.close();
       }
+      break;
     case MessageType.Error:
       console.log(`Error: ${data.message}`);
       wordleClient.askLastQuestion();
