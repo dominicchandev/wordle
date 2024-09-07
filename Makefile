@@ -9,3 +9,6 @@ server:
 
 client:
 	ts-node client/client.ts
+
+test:
+	npm test

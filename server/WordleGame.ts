@@ -31,6 +31,7 @@ class WordleGame{
 
     public async onNewConnection(ws: WebSocket): Promise<string> {
         const playerId = await this.playerManager.create();
+        this.logger.info(`Sent welcome message to player ${playerId}`)
         ws.send(JSON.stringify({ type: MessageType.Welcome, playerId }));
         return playerId;
     }
