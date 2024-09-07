@@ -51,7 +51,7 @@ class WordleGame{
         for (const playerIdInRoom of playerIdsInRoom) {
             let wsClient = wsClients.get(playerIdInRoom);
             if (wsClient != undefined) {
-                wsClient.send(JSON.stringify({ type: MessageType.playerJoinedRoom, message: `Player ${playerId} joined room ${roomId}.`, playerId: playerId, roomId: roomId }));
+                wsClient.send(JSON.stringify({ type: MessageType.PlayerJoinedRoom, message: `Player ${playerId} joined room ${roomId}.`, playerId: playerId, roomId: roomId }));
             }
         }
 
@@ -71,7 +71,7 @@ class WordleGame{
         ws.send(JSON.stringify({ type: MessageType.Start, message: `Please enter a ${this.lengthOfWords}-letter word.` }));
     }
 
-    public async handleGuess(ws: WebSocket, playerId: string, guess: string): Promise<void> {
+    public async handleGuess(ws: WebSocket, playerId: string, guess: string, wsClients: Map<string, WebSocket>): Promise<void> {
         this.logger.info(`Received guess '${guess}' from player ${playerId}`);
         const player = await this.playerManager.read(playerId)
         if (!player || player.won) return;
@@ -84,12 +84,24 @@ class WordleGame{
         }
       
         const numOfRound = player.currentRound + 1;
-        this.playerManager.updateCurrentRound(playerId, numOfRound);
+        await this.playerManager.updateCurrentRound(playerId, numOfRound);
 
         const feedback = this.getFeedback(guess, player.targetWord!);
         this.logger.info(`Sending feedback ${feedback} to player ${playerId}`);
         ws.send(JSON.stringify({ type: MessageType.Feedback, feedback }));
-      
+        
+        if (player.roomId != undefined) {
+            const playerIdsInRoom = await this.roomManager.getPlayerIdsInRoom(player.roomId);
+            for (const playerIdInRoom of playerIdsInRoom) {
+                if (playerIdInRoom === playerId) {
+                    continue;
+                }
+                let wsClient = wsClients.get(playerIdInRoom);
+                if (wsClient!= undefined) {
+                    wsClient.send(JSON.stringify({ type: MessageType.ReportProgess, playerId: playerId, currentRound: numOfRound }));
+                }
+            }
+        }
         if (feedback === 'OOOOO') {
             player.won = true;
             ws.send(JSON.stringify({ type: MessageType.Result, message: 'Congratulations! You\'ve guessed the word!' }));

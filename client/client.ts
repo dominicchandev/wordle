@@ -9,7 +9,11 @@ const rl = readline.createInterface({
 });
 
 class WordleClient{
-  constructor() {};
+  public joinedRoom: boolean;
+
+  constructor() {
+    this.joinedRoom = false;
+  };
 
   public handleWelcome(playerId: string) {
     console.log(`Welcome, your player ID is ${playerId}`);
@@ -60,9 +64,10 @@ ws.on('message', (message: string) => {
       break;
     case MessageType.RoomCreated:
       console.log(`Room ${data.roomId} is created.`);
-    case MessageType.playerJoinedRoom:
+    case MessageType.PlayerJoinedRoom:
       const roomId = data.roomId;
       const playerId = data.playerId;
+      wordleClient.joinedRoom = true;
       console.log(`Player ${playerId} entered room ${roomId}.`);
       break;
     case MessageType.Start:
@@ -73,10 +78,22 @@ ws.on('message', (message: string) => {
       console.log(`Feedback: ${data.feedback}`);
       wordleClient.submitGuess();
       break;
+    case MessageType.ReportProgess:
+      if (wordleClient.joinedRoom) {
+        console.log(`Player ${data.playerId} is in ${data.currentRound} round.`);
+      }
+      break;
     case MessageType.Result:
       console.log(data.message);
-      ws.close()
+      if (!wordleClient.joinedRoom) {
+        ws.close();
+      }
       break;
+    case MessageType.RoomResult:
+      console.log(data.message);
+      if (wordleClient.joinedRoom) {
+        ws.close();
+      }
     case MessageType.Error:
       console.log(`Error: ${data.message}`);
       break;

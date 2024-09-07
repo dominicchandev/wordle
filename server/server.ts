@@ -33,7 +33,7 @@ wss.on('connection', async (ws: WebSocket) => {
         await wordleGame.handlePlaySingle(ws, playerId);
         break;
       case MessageType.Guess:
-        await wordleGame.handleGuess(ws, playerId, data.guess);
+        await wordleGame.handleGuess(ws, playerId, data.guess, wsClients);
         break;
       default:
         logger.error("Unknown message type");

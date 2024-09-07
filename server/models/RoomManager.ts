@@ -63,6 +63,7 @@ class RoomManager {
         if (room.wordsByPlayerId === undefined) {
             room.wordsByPlayerId = {};
         }
+        await this.playerManager.updateRoomId(playerId, roomId);
         await this.playerManager.updateProvidedWord(playerId, word);
         this.logger.info(`Before setting wordsByPlayerId: ${JSON.stringify(room.wordsByPlayerId)}`)
         room.wordsByPlayerId[playerId] = word;

@@ -42,6 +42,16 @@ class PlayerManager {
         }   
     }
 
+    public async updateRoomId(playerId: string, roomId: string) {
+        const player_in_redis = await this.read(playerId);
+        if (player_in_redis) {
+            const redisClient = await RedisManager.getClient();
+            player_in_redis.roomId = roomId;
+            await redisClient.set(`player:${playerId}`, JSON.stringify(player_in_redis));
+            this.logger.info(`Update player ${playerId} to ${JSON.stringify(player_in_redis)}`);
+        }
+    } 
+
     public async updateTargetWord(playerId: string, targetWord: string) {
         const player_in_redis = await this.read(playerId);
         if (player_in_redis) {

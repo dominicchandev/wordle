@@ -3,12 +3,14 @@ enum MessageType {
     CreateRoom = 'createRoom',
     RoomCreated = 'roomCreated',
     JoinRoom = 'joinRoom',
-    playerJoinedRoom = 'playerJoinedRoom',
+    PlayerJoinedRoom = 'playerJoinedRoom',
     PlaySingle = 'playSingle',
     Start = "start",
     Guess = 'guess',
     Feedback = 'feedback',
+    ReportProgess = 'reportProgess',
     Result = 'result',
+    RoomResult = 'roomResult',
     Error = 'error'
 }
 
