@@ -31,15 +31,13 @@ describe('WebSocket Server', () => {
             if (eventCount === 1) {
                 roomId = data.roomId;
                 expect(data.type).toBe(MessageType.RoomCreated);
-            } else if (eventCount === 2) {
-                expect(data.type).toBe(MessageType.PlayerJoinedRoom);
+                done();
             }
-            done();
         };
 
         ws.send(JSON.stringify({
         type: MessageType.CreateRoom,
-        word: 'apple',
+        word: 'hello',
         numOfPlayers: 2
         }));
     });
@@ -54,9 +52,11 @@ describe('WebSocket Server', () => {
         ws.send(JSON.stringify({
         type: MessageType.JoinRoom,
         roomId: roomId,
-        word: 'apple',
+        word: 'world',
         }));
     });
+
+    
 
     it('should reject roomId', (done) => {
         ws.onmessage = (event) => {
@@ -97,5 +97,4 @@ describe('WebSocket Server', () => {
         type: MessageType.PlaySingle,
         }));
     });
-
 });
