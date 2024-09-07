@@ -1,8 +1,11 @@
 import WebSocket from 'ws';
 import readline from 'readline';
 import MessageType from '../common/MessageType';
+import * as dotenv from 'dotenv';
 
-const ws = new WebSocket('ws://localhost:3000');
+dotenv.config();
+
+const ws = new WebSocket(`ws://localhost:${process.env.SERVER_PORT}`);
 const rl = readline.createInterface({
   input: process.stdin,
   output: process.stdout
@@ -15,20 +18,51 @@ class WordleClient{
     this.joinedRoom = false;
   };
 
+  private validateWordInput(input: string): boolean {
+    return input.length === Number(process.env.LENGTH_OF_WORDS);
+  }
+
+  private validateNumberOfPlayers(input: string): boolean {
+    const numOfPlayers = Number(input);
+    return (!isNaN(numOfPlayers) && 2 <= numOfPlayers && numOfPlayers <= Number(process.env.MAX_PLAYERS_IN_ROOM));
+  }
+
+  private askQuestion(question: string, validator: (input: string) => boolean) {
+    return new Promise<string>((resolve) => {
+      function ask() {
+        rl.question(question, (answer) => {
+          if (validator(answer)) {
+            resolve(answer);
+          } else {
+            console.log('Invalid input. Please try again.');
+            ask();
+          }
+        });
+      }
+      ask();
+    });
+  }
+
   public handleWelcome(playerId: string) {
     console.log(`Welcome, your player ID is ${playerId}`);
-    rl.question(`${MessageType.CreateRoom}, ${MessageType.JoinRoom} or ${MessageType.PlaySingle}?`, (answer: string) => {
-      switch (answer) {
+
+    this.askQuestion(`${MessageType.CreateRoom}, ${MessageType.JoinRoom} or ${MessageType.PlaySingle}?`, (input) => [MessageType.CreateRoom, MessageType.JoinRoom, MessageType.PlaySingle].includes(input as MessageType) )
+    .then((playMode) => {
+      switch (playMode) {
         case MessageType.CreateRoom:
-          rl.question("Number of Players:", (numOfPlayers: string) => {
-            rl.question("Provide a word:", (word: string) => {
+          this.askQuestion("Number of Players: ", this.validateNumberOfPlayers)
+          .then((numOfPlayers) => {
+            this.askQuestion("Provide a word: ", this.validateWordInput)
+            .then((word) => {
               ws.send(JSON.stringify({ type: MessageType.CreateRoom, numOfPlayers: numOfPlayers, word: word}));
             })
           })
           break;
         case MessageType.JoinRoom:
-          rl.question("Enter RoomId:", (roomId: string) => {
-            rl.question("Provide a word:", (word: string) => {
+          this.askQuestion("Enter RoomId: ", (input) => !isNaN(Number(input)))
+          .then((roomId) => {
+            this.askQuestion("Provide a word: ", this.validateWordInput)
+            .then((word) => {
               ws.send(JSON.stringify({ type: MessageType.JoinRoom, roomId: roomId, word: word}));
             })
           })
@@ -36,14 +70,13 @@ class WordleClient{
         case MessageType.PlaySingle:
           ws.send(JSON.stringify({ type: MessageType.PlaySingle, playerId: playerId}));
           break;
-        default:
-          console.error(`No suhc option: ${answer}`);
       }
     })
   }
 
   public submitGuess() {
-    rl.question("Enter your guess: ", (guess: string) => {
+    this.askQuestion("Enter your guess: ", this.validateWordInput)
+    .then((guess) => {
       ws.send(JSON.stringify({ type: MessageType.Guess, guess: guess.trim() }));
     })
   }
