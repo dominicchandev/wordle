@@ -124,11 +124,13 @@ class WordleGame{
         if (feedback === 'OOOOO') {
             await this.playerManager.updateHitTargetWord(playerId, true);
             hitTargetWord = true;
-            finishedGuessing = true
+            finishedGuessing = true;
+            this.logger.info(`Sending hit result to player ${playerId}`);
             ws.send(JSON.stringify({ type: MessageType.Result, message: 'Congratulations! You\'ve guessed the word!' }));
-        } else if (player.currentRound >= this.maxRounds) {
+        } else if (currentRound >= this.maxRounds) {
+            this.logger.info(`Sending gameover result to player ${playerId}`);
             ws.send(JSON.stringify({ type: MessageType.Result, message: `Game over! The correct word was: ${player.targetWord}` }));
-            finishedGuessing = true
+            finishedGuessing = true;
         }
 
         if (finishedGuessing && player.roomId) {
